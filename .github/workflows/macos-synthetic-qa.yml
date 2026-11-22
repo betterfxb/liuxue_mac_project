@@ -1,0 +1,115 @@
+name: Admissions workbench macOS synthetic QA
+"on":
+  workflow_dispatch:
+    inputs:
+      node_archive_sha256:
+        description: Independently verified official Node 22.12.0 darwin-arm64 tar.gz SHA256
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: admissions-workbench-mac-synthetic-qa
+  cancel-in-progress: false
+jobs:
+  syntax:
+    if: github.repository == 'betterfxb/liuxue_mac_project'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: JS and build script parse and source checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n macos/build-local-qa.sh
+          node --check macos/stage-runtime.cjs
+          node - <<'NODE'
+          const fs=require('node:fs'), c=require('node:crypto'), a=require('node:assert/strict');
+          const m=JSON.parse(fs.readFileSync('BASELINE-INPUT.json','utf8'));
+          a.equal(m.length,32); a.equal(new Set(m.map(x=>x.file)).size,32);
+          for(const x of m){
+            a.match(x.file,/^(?:api\/|console\/|[a-z-]+\.cjs$)[a-zA-Z0-9_./-]*$/);
+            a.ok(x.file.split('/').every(y=>y && y!=='.' && y!=='..'));
+            a.ok(fs.lstatSync(x.file).isFile());
+            a.equal(c.createHash('sha256').update(fs.readFileSync(x.file)).digest('hex').toUpperCase(),x.sha256);
+          }
+          NODE
+          git ls-files -z '*.js' '*.cjs' | xargs -0 -n1 node --check
+  mac-qa:
+    if: github.repository == 'betterfxb/liuxue_mac_project'
+    needs: syntax
+    runs-on: macos-15
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Build and verify one ARM64 synthetic bundle (not a Finder test)
+        shell: bash
+        env:
+          REFERENCE_NODE_SHA: ${{ inputs.node_archive_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$(uname -m)" == arm64 && "$REFERENCE_NODE_SHA" =~ ^[0-9a-f]{64}$ ]]
+          xcodebuild -version
+          sw_vers -productVersion
+          tmp="$(mktemp -d "$RUNNER_TEMP/admissions-qa.XXXXXXXX")"
+          name=node-v22.12.0-darwin-arm64
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2             "https://nodejs.org/dist/v22.12.0/$name.tar.gz" -o "$tmp/node.tar.gz"
+          printf '%s  %s\n' "$REFERENCE_NODE_SHA" "$tmp/node.tar.gz" | shasum -a 256 -c -
+          tar -xzf "$tmp/node.tar.gz" -C "$tmp"
+          node="$tmp/$name/bin/node"
+          [[ "$("$node" --version)" == v22.12.0 ]]
+          "$node" --experimental-sqlite -e 'new (require("node:sqlite").DatabaseSync)(":memory:").close()'
+          mkdir "$tmp/deps" "$tmp/out"
+          cp api/package.json "$tmp/deps/package.json"
+          "$node" - "$tmp/deps/package-lock.json" <<'NODE'
+          const fs=require('node:fs'), a=require('node:assert/strict');
+          const l=JSON.parse(fs.readFileSync('api/package-lock.json','utf8'));
+          let n=0;
+          for (const [k,v] of Object.entries(l.packages)) {
+            if(!k) continue;
+            if(!v.dev){n++; a.ok(!v.hasInstallScript&&!v.cpu&&!v.os&&!v.link);}
+            a.match(v.integrity,/^sha512-[A-Za-z0-9+/]+=*$/);
+            a.match(v.resolved,/^https:\/\/registry\.npmmirror\.com\/[a-zA-Z0-9@._\/-]+\.tgz$/);
+            v.resolved=v.resolved.replace('https://registry.npmmirror.com/','https://registry.npmjs.org/');
+          }
+          a.equal(n,117);
+          fs.writeFileSync(process.argv[2],JSON.stringify(l));
+          NODE
+          (cd "$tmp/deps" && "$node" "$tmp/$name/lib/node_modules/npm/bin/npm-cli.js" ci --omit=dev --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org)
+          [[ -z "$(find "$tmp/deps/node_modules" -name '*.node' -print -quit)" ]]
+          digest="$(shasum -a 256 "$node" | awk '{print $1}')"
+          bash macos/build-local-qa.sh --synthetic-qa arm64 "$node" "$digest" "$tmp/deps/node_modules" "$tmp/out"
+          app="$tmp/out/AdmissionsWorkbench-QA.app"
+          /usr/bin/plutil -lint "$app/Contents/Info.plist"
+          for bin in "$app/Contents/MacOS/AdmissionsWorkbench" "$app/Contents/MacOS/admissions-node"; do
+            xcrun vtool -show-build "$bin"
+          done
+          cmp "$node" "$app/Contents/MacOS/admissions-node"
+          "$app/Contents/MacOS/admissions-node" - "$app/Contents/Resources/workbench" <<'NODE'
+          const fs=require('node:fs'),os=require('node:os'),p=require('node:path'),a=require('node:assert/strict');
+          const src=process.argv[2];
+          const parent=fs.mkdtempSync(p.join(fs.realpathSync(os.tmpdir()),'admissions-native-'));
+          const root=fs.mkdtempSync(p.join(parent,'synthetic-qa-'));
+          fs.writeFileSync(p.join(root,'.qa-marker'),'admissions-synthetic-only',{flag:'wx'});
+          (async()=>{
+            const b=await require(p.join(src,'launch.cjs')).launch({mode:'synthetic-qa',root,qaParent:parent});
+            try {
+              a.match(b.origin,/^http:\/\/127\.0\.0\.1:\d+$/);
+              const r=await fetch(b.page,{redirect:'error',signal:AbortSignal.timeout(3000)});
+              a.equal(r.status,200);
+              a.match(await r.text(),/<div id="root"/);
+            } finally { a.equal((await b.stop()).graceful,true); }
+          })().catch(()=>{console.error('Bundled QA backend smoke failed');process.exitCode=1});
+          NODE
+          mkdir "$RUNNER_TEMP/admissions-qa-artifact" # ephemeral runner only; do not upload
+          dmg="$RUNNER_TEMP/admissions-qa-artifact/AdmissionsWorkbench-QA-arm64.dmg"
+          mkdir "$tmp/image"
+          ditto "$app" "$tmp/image/AdmissionsWorkbench-QA.app"
+          hdiutil create -volname "Admissions Workbench QA" -srcfolder "$tmp/image" -fs HFS+ -format UDZO -ov "$dmg"
+          hdiutil verify "$dmg"
+          (cd "$RUNNER_TEMP/admissions-qa-artifact" && shasum -a 256 AdmissionsWorkbench-QA-arm64.dmg > SHA256SUMS && shasum -a 256 -c SHA256SUMS)

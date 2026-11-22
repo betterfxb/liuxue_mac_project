@@ -1,0 +1,130 @@
+[
+  {
+    "file": "api/dist/admissions.module.js",
+    "sha256": "24C577556F1DA55EA420EE56C359895DBF11617ED7B443A346E1B2DFC1B550E6"
+  },
+  {
+    "file": "api/dist/applications/applications.controller.js",
+    "sha256": "BF94C7B78E27F4D5A3CF743669AF760D43A003188FA6B26E305E1D4B39CA5B86"
+  },
+  {
+    "file": "api/dist/applications/applications.module.js",
+    "sha256": "3B489E7808F59D5EB8A8B9B4535DB951514A8088CCDC116CB5B95E7DF3C13C26"
+  },
+  {
+    "file": "api/dist/applications/applications.service.js",
+    "sha256": "DBF322DAE4DE69C8D975F33835D286FBC3D56EE8C42493EF87CFC22C8CD18BDE"
+  },
+  {
+    "file": "api/dist/applications/hku-r367-plan.js",
+    "sha256": "11A7EFA4A58BC80545CB4E6A6005C767D8FBF4B46815FAB697C933BE3DAD63DB"
+  },
+  {
+    "file": "api/dist/applications/local-synthetic-pdf.js",
+    "sha256": "8CBC863DF9DE456BCE0D5B5C8ABA76D0FF7D633CF024062DD24E54A6997844E0"
+  },
+  {
+    "file": "api/dist/applications/selected-synthetic-pdf.js",
+    "sha256": "6DC116879E5CB8C44FF62F128DA95CBA8CF46672A2B410FA9B91B545C47DB7D2"
+  },
+  {
+    "file": "api/dist/auth/auth.controller.js",
+    "sha256": "2719DFE2FEA3CED5F7E84961C347FEC8B01DF95E78BE48EF52D3366089179048"
+  },
+  {
+    "file": "api/dist/auth/auth.module.js",
+    "sha256": "5216F1B70D5F4F222D2F3F1DA05B359E5CBAFD2B387F73A0282892FC38128ED5"
+  },
+  {
+    "file": "api/dist/auth/auth.service.js",
+    "sha256": "61D3E25DCBBD614019D0AB4A25A50C69E9459BEFBC24E80590FCE3AE07102F3C"
+  },
+  {
+    "file": "api/dist/auth/jwt.guard.js",
+    "sha256": "15B85D740B650DC890E488A4C0385E25F28FAE5D0E5ACCA6EA0090FD2A6ABC4E"
+  },
+  {
+    "file": "api/dist/common/all-exceptions.filter.js",
+    "sha256": "2120F7F23D08C2FD955E396EC88BEB78909E4FC246D50A8364E1B1F342F2A0F3"
+  },
+  {
+    "file": "api/dist/common/biz-error.js",
+    "sha256": "E2B695B775B6CD2843BF79A97B49CBA2CE775F67638AB913034397812D818512"
+  },
+  {
+    "file": "api/dist/common/envelope.interceptor.js",
+    "sha256": "6E8973A466AA0EA1DB928DF0E5E3CDE43CAE41288878853DFB6416D188500010"
+  },
+  {
+    "file": "api/dist/common/idempotency.js",
+    "sha256": "1541D174C42F8470078C4DE3E923F9140830701E9548CCE8F6A08E65C3E62EFE"
+  },
+  {
+    "file": "api/dist/common/maintenance.js",
+    "sha256": "C6F28767C11644FB1AEE3C8166FD705E02F29522EE70E49BDD48154FE5D41130"
+  },
+  {
+    "file": "api/dist/common/pagination.js",
+    "sha256": "789C10D8C1A509B9C5BB08DC20598532A33DAFCCAE1CCDCC96FD633205097959"
+  },
+  {
+    "file": "api/dist/common/rate-limit.js",
+    "sha256": "A440384FC21B11A6A5866D94E4FCE64F83813A2D61633E0B3A0F9898D2251B26"
+  },
+  {
+    "file": "api/dist/common/runtime-config.js",
+    "sha256": "D18B074E67AA895AC56C705D2DC48F0A0A0B2F7619EB2DA1A5E72656799BBDD1"
+  },
+  {
+    "file": "api/dist/common/trace.middleware.js",
+    "sha256": "E220CC87B9557B9CEB99E9B5EC2A2DC4A1E7876E4DA6C9B709682C17F02A70E2"
+  },
+  {
+    "file": "api/dist/db/database.module.js",
+    "sha256": "F3736B1A503B0E63813B83DA2650D37510446EAF4AF39627849453F4C705BD81"
+  },
+  {
+    "file": "api/dist/db/database.service.js",
+    "sha256": "DB9525EB2D355FA3775D6F7D6AE3E35543699AA3D1153A2523CABBE278EE00A0"
+  },
+  {
+    "file": "api/package-lock.json",
+    "sha256": "21E8EDF529548029865A7F1E7C09FD45C4BD6403827C7427253C9A9E5BA5184B"
+  },
+  {
+    "file": "api/package.json",
+    "sha256": "BFAFB277C77DD26B5745CAF7AAE70413935C05E0B98A35FE2017579CAF3B2CC0"
+  },
+  {
+    "file": "api/scripts/lib/maintenance-state.cjs",
+    "sha256": "C24830124D6A05176198880F33A9963CEE7859F5457735BE202CBE4A328B135F"
+  },
+  {
+    "file": "launch.cjs",
+    "sha256": "4BB1684646B19588C89A4653FA92F6E42F00EE25E2E8D6B97F981DB40FE3BB3F"
+  },
+  {
+    "file": "server-qa.cjs",
+    "sha256": "F3855C045C508A312A0657065DF9455F74E009FEDC8AD9A23B104AA1E63A39EB"
+  },
+  {
+    "file": "native-bridge.cjs",
+    "sha256": "D5882F3E7AC07C6CC3577760DA343703525F1894AA5500954208099D09A6875B"
+  },
+  {
+    "file": "api/dist/applications/native-preview-qa.js",
+    "sha256": "8C02E92CA409278961DD73F7FBC542A81FC911BD81BB26D6829F114AF433B1BA"
+  },
+  {
+    "file": "console/dist/index.html",
+    "sha256": "BE45FF210C95EBF2DFCFBF71DB08112C5C85E70ACCCB86658BC16D28059EEF88"
+  },
+  {
+    "file": "console/dist/assets/index-CT-avtcp.js",
+    "sha256": "5560AA4A79B6BBB7B75ED710854145200B7209B9727CC310B86A09FFA554820E"
+  },
+  {
+    "file": "console/dist/assets/index-DKNWT4Ub.css",
+    "sha256": "D953E376B802DDF140CEF22206B9B7DAE105D0BF31E43EC5686DE2E08E76486E"
+  }
+]

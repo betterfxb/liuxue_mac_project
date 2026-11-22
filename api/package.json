@@ -1,0 +1,30 @@
+{
+  "name": "qiuzhi-api-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "留学网申 & 实习助手 · api-gateway（鉴权 / Profile / 申请管理 / 订阅 / 对外 API）",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node --experimental-sqlite dist/main.js",
+    "start:dev": "npm run build && npm run start",
+    "test": "npm run build && node --experimental-sqlite test/e2e.js && node --experimental-sqlite test/p0_security.cjs && node --experimental-sqlite test/profile_schema.cjs && node --experimental-sqlite test/job_availability.cjs && node --experimental-sqlite test/profile_conflict.cjs && node --experimental-sqlite test/mail_safety.mjs && node test/crawler_control.cjs && node test/runtime_config.cjs && node --experimental-sqlite test/auth_rotation.cjs && node --experimental-sqlite test/application_conflict.cjs && node --experimental-sqlite test/subscription_conflict.cjs && node test/callback_egress.cjs && node --experimental-sqlite test/subscription_execution.cjs && node --experimental-sqlite test/schema_migration.cjs && node --experimental-sqlite test/maintenance_gate.cjs && node --experimental-sqlite test/job_applications.cjs && node --experimental-sqlite test/job_applications_review.cjs && node --experimental-sqlite test/upload_integrity.cjs && node --experimental-sqlite test/upload_orphan_safety.cjs",
+    "preflight:production": "node dist/cli/check-runtime.js --production",
+    "test:backup": "npm run build && node --experimental-sqlite ../../scripts/tests/local_backup_test.mjs",
+    "test:upload-integrity": "npm run build && node --experimental-sqlite test/upload_integrity.cjs",
+    "test:upload-orphans": "npm run build && node --experimental-sqlite test/upload_orphan_safety.cjs"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "bcryptjs": "^2.4.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
