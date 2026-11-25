@@ -1,11 +1,6 @@
 name: Admissions workbench macOS synthetic QA
 "on":
   workflow_dispatch:
-    inputs:
-      node_archive_sha256:
-        description: Independently verified official Node 22.12.0 darwin-arm64 tar.gz SHA256
-        required: true
-        type: string
 permissions:
   contents: read
 concurrency:
@@ -13,7 +8,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   syntax:
-    if: github.repository == 'betterfxb/liuxue_mac_project'
+    if: github.repository == 'betterfxb/liuxue_mac_project' && github.event.repository.private == false && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
@@ -39,7 +34,7 @@ jobs:
           NODE
           git ls-files -z '*.js' '*.cjs' | xargs -0 -n1 node --check
   mac-qa:
-    if: github.repository == 'betterfxb/liuxue_mac_project'
+    if: github.repository == 'betterfxb/liuxue_mac_project' && github.event.repository.private == false && github.ref == 'refs/heads/main'
     needs: syntax
     runs-on: macos-15
     timeout-minutes: 12
@@ -50,19 +45,19 @@ jobs:
       - name: Build and verify one ARM64 synthetic bundle (not a Finder test)
         shell: bash
         env:
-          REFERENCE_NODE_SHA: ${{ inputs.node_archive_sha256 }}
+          REFERENCE_NODE_SHA: e7131995759b61a0170b646010d2ad35a5d37b4cb0d471f3e8317eac6f742f3d
         run: |
           set -euo pipefail
           [[ "$(uname -m)" == arm64 && "$REFERENCE_NODE_SHA" =~ ^[0-9a-f]{64}$ ]]
           xcodebuild -version
           sw_vers -productVersion
           tmp="$(mktemp -d "$RUNNER_TEMP/admissions-qa.XXXXXXXX")"
-          name=node-v22.12.0-darwin-arm64
-          curl --fail --silent --show-error --proto '=https' --tlsv1.2             "https://nodejs.org/dist/v22.12.0/$name.tar.gz" -o "$tmp/node.tar.gz"
+          name=node-v22.23.5-darwin-arm64
+          curl --fail --silent --show-error --proto '=https' --tlsv1.2             "https://nodejs.org/dist/v22.23.5/$name.tar.gz" -o "$tmp/node.tar.gz"
           printf '%s  %s\n' "$REFERENCE_NODE_SHA" "$tmp/node.tar.gz" | shasum -a 256 -c -
           tar -xzf "$tmp/node.tar.gz" -C "$tmp"
           node="$tmp/$name/bin/node"
-          [[ "$("$node" --version)" == v22.12.0 ]]
+          [[ "$("$node" --version)" == v22.23.5 ]]
           "$node" --experimental-sqlite -e 'new (require("node:sqlite").DatabaseSync)(":memory:").close()'
           mkdir "$tmp/deps" "$tmp/out"
           cp api/package.json "$tmp/deps/package.json"
@@ -106,10 +101,48 @@ jobs:
             } finally { a.equal((await b.stop()).graceful,true); }
           })().catch(()=>{console.error('Bundled QA backend smoke failed');process.exitCode=1});
           NODE
-          mkdir "$RUNNER_TEMP/admissions-qa-artifact" # ephemeral runner only; do not upload
+          mkdir "$RUNNER_TEMP/admissions-qa-artifact"
           dmg="$RUNNER_TEMP/admissions-qa-artifact/AdmissionsWorkbench-QA-arm64.dmg"
           mkdir "$tmp/image"
           ditto "$app" "$tmp/image/AdmissionsWorkbench-QA.app"
+          install -m 0644 THIRD_PARTY_NOTICES.txt "$tmp/image/THIRD_PARTY_NOTICES.txt"
+          install -m 0644 "$tmp/$name/LICENSE" "$tmp/image/Node-LICENSE.txt"
           hdiutil create -volname "Admissions Workbench QA" -srcfolder "$tmp/image" -fs HFS+ -format UDZO -ov "$dmg"
           hdiutil verify "$dmg"
+          mount="$tmp/mounted"
+          mkdir "$mount"
+          hdiutil attach -readonly -nobrowse -noautoopen -mountpoint "$mount" "$dmg"
+          trap 'hdiutil detach "$mount" >/dev/null' EXIT
+          bundle="$mount/AdmissionsWorkbench-QA.app/Contents"
+          cmp "$node" "$bundle/MacOS/admissions-node"
+          "$bundle/MacOS/admissions-node" - "$bundle/Resources/workbench" "$tmp" <<'NODE'
+          const p=require('node:path'), fs=require('node:fs'), c=require('node:crypto'), a=require('node:assert/strict');
+          const src=process.argv[2], out=process.argv[3];
+          const fixture=require(p.join(src,'api/dist/applications/selected-synthetic-pdf.js')).makeSelectedFixture;
+          for(const [key,size,sha] of [
+            ['B',759,'af4f7eea4a63240ec249b0f835bce18a9f66fa3d73c0626e4ff8b2af2674ae5d'],
+            ['C',1240,'88e2bcc6fe0ac708885c436527f8d0d6e1002f46565d23ecd25d45d344796f37'],
+          ]){
+            const bytes=fixture(key);
+            a.equal(bytes.length,size);
+            a.equal(c.createHash('sha256').update(bytes).digest('hex'),sha);
+            if(key==='C') fs.writeFileSync(p.join(out,'synthetic-C.pdf'),bytes,{flag:'wx'});
+          }
+          NODE
+          "$bundle/MacOS/AdmissionsWorkbench" --render-synthetic-page-v1 < "$tmp/synthetic-C.pdf" > "$tmp/synthetic-C.png"
+          sips -g pixelWidth -g pixelHeight "$tmp/synthetic-C.png" > "$tmp/render-size"
+          grep -Eq 'pixelWidth: 989$' "$tmp/render-size"
+          grep -Eq 'pixelHeight: 1400$' "$tmp/render-size"
+          hdiutil detach "$mount"
+          trap - EXIT
           (cd "$RUNNER_TEMP/admissions-qa-artifact" && shasum -a 256 AdmissionsWorkbench-QA-arm64.dmg > SHA256SUMS && shasum -a 256 -c SHA256SUMS)
+      - name: Upload only the two approved test files for one day
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: AdmissionsWorkbench-QA-arm64
+          path: |
+            ${{ runner.temp }}/admissions-qa-artifact/AdmissionsWorkbench-QA-arm64.dmg
+            ${{ runner.temp }}/admissions-qa-artifact/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
